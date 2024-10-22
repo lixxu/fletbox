@@ -1,0 +1,36 @@
+[project]
+name = "fletbox"
+authors = [{ name = "Lix Xu", email = "xuzenglin@gmail.com" }]
+description = "a collection of helpers for flet develop"
+readme = "README.md"
+requires-python = ">=3.8"
+license = { file = "LICENSE.txt" }
+keywords = ["fletbox"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: BSD License",
+    "Operating System :: OS Independent",
+]
+dependencies = ["flet"]
+dynamic = ["version"]
+
+[tool.setuptools.dynamic]
+version = { attr = "fletbox.__version__" }
+
+[project.urls]
+"Homepage" = "https://github.com/lixxu/fletbox"
+"Bug Tracker" = "https://github.com/lixxu/fletbox/issues"
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.packages.find]
+where = ["."]
+exclude = ["tests*", "docs*", "examples*"]
+
+[tool.setuptools.package-data]
+fletbox = ["static/**", "templates/**"]
