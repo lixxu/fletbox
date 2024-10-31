@@ -5,8 +5,8 @@ from typing import Any
 
 import flet as ft
 
+from . import buttons as fbb
 from . import dialogs as fbd
-from . import helpers as fbh
 
 
 def setup_alignment(page: ft.Page, w: str = "", v: str = "center", h: str = "center") -> None:
@@ -93,7 +93,7 @@ def setup_events(page: ft.Page, **kwargs: Any) -> None:
 
     def do_quit() -> None:
         if getattr(page, "quit_confirm", None):
-            page.open(confirm_dialog)
+            page.open(ask_dlg)
         else:
             really_quit()
 
@@ -103,7 +103,7 @@ def setup_events(page: ft.Page, **kwargs: Any) -> None:
                 if page.can_quit:
                     do_quit()
                 else:
-                    page.open(running_dialog)
+                    page.open(ok_dlg)
 
             else:
                 do_quit()
@@ -117,18 +117,23 @@ def setup_events(page: ft.Page, **kwargs: Any) -> None:
         if data == "yes":
             really_quit()
 
-    yes_btn = fbh.get_button(kwargs.get("yes_label", "退出"), clicked, data="yes")
-    no_btn = fbh.get_button(kwargs.get("no_label", "取消"), clicked, data="no")
-    ok_btn = fbh.get_button(kwargs.get("ok_label", "确定"), clicked, data="running")
+    btns = {}
+    kw = dict(func=clicked)
+    for k in ("yes", "no", "ok"):
+        if f"{k}_label" in kwargs:
+            kw.update(label=kwargs[f"{k}_label"])
 
-    confirm_kw = kwargs.get("confirm_kw", {})
-    confirm_kw.setdefault("icon", "warning")
-    confirm_kw.setdefault("title_kw", dict(color="red"))
-    confirm_kw.setdefault("icon_kw", dict(color="red", size=36))
-    confirm_dialog = fbd.get_confirm_dialog(
-        [yes_btn, no_btn], title=kwargs.get("confirm_title", "确定要退出吗?"), **confirm_kw
+        btns[k] = getattr(fbb, k)(**kw)
+        kw.pop("label", None)
+
+    ask_kw = kwargs.get("confirm_kw", {})
+    ask_kw.setdefault("icon", "warning")
+    ask_kw.setdefault("title_kw", dict(color="red"))
+    ask_kw.setdefault("icon_kw", dict(color="red", size=36))
+    ask_dlg = fbd.get_confirm_dialog(
+        [btns["yes"], btns["no"]], title=kwargs.get("confirm_title", "确定要退出吗?"), **ask_kw
     )
-    running_dialog = fbd.get_confirm_dialog(
-        [ok_btn], title=kwargs.get("running_notice", "有正在运行的任务, 无法退出!"), **confirm_kw
+    ok_dlg = fbd.get_confirm_dialog(
+        [btns["ok"]], title=kwargs.get("running_notice", "有正在运行的任务, 无法退出!"), **ask_kw
     )
-    dlgs = dict(yes=confirm_dialog, no=confirm_dialog, running=running_dialog)
+    dlgs = dict(yes=ask_dlg, no=ask_dlg, ok=ok_dlg)

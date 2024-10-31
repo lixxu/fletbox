@@ -102,6 +102,21 @@ def get_assets_dir(current_dir: str = ".") -> str:
     return "assets"
 
 
+def hr(**kwargs: Any) -> ft.Divider:
+    return ft.Divider(**kwargs)
+
+
+def vhr(**kwargs: Any) -> ft.VerticalDivider:
+    return ft.VerticalDivider(**kwargs)
+
+
+def get_text(label: Any = "", **kwargs: Any) -> ft.Text:
+    if kwargs.pop("bold", None):
+        kwargs.setdefault("weight", ft.FontWeight.BOLD)
+
+    return ft.Text(str(label), **kwargs)
+
+
 def get_text_field(label: str, value: Any = "", **kwargs: Any) -> ft.TextField:
     return ft.TextField(label=label, value=value, **kwargs)
 
@@ -168,7 +183,7 @@ def get_rail(
     return ft.NavigationRailDestination(**(kwargs | kw))
 
 
-def create_top_button(text: str, data: str, func: Any, **kwargs: Any) -> ft.ElevatedButton:
+def create_top_button(text: str, data: str = "", func: Any = None, **kwargs: Any) -> ft.ElevatedButton:
     return ft.ElevatedButton(
         text=text,
         data=data,
@@ -212,6 +227,7 @@ class TitleArea(ft.Container):
         # self.bgcolor = "indigo300"
         self.padding = 0
         self.margin = 0
+        # self.margin = ft.margin.only(left=5)
         self.expand = True
         self._title = title
         self._icon = icon
@@ -237,7 +253,7 @@ class TitleBar(ft.Row):
     def click_top(self, e: Any):
         e.control.selected = not e.control.selected
         self.page.window.always_on_top = not self.page.window.always_on_top
-        tooltip = "取消置于顶层" if self.page.window.always_on_top else "置于顶层"
+        tooltip = "取消窗口置顶" if self.page.window.always_on_top else "窗口置顶"
         e.control.tooltip = tooltip
         self.page.update()
 
@@ -261,13 +277,18 @@ class TitleBar(ft.Row):
         controls = []
         self.page.on_resize = on_resize
         if self._icon:
-            controls.append(ft.Image(src=self._icon, width=20, height=20, fit=ft.ImageFit.CONTAIN))
+            controls.append(
+                ft.Container(
+                    ft.Image(src=self._icon, width=20, height=20, fit=ft.ImageFit.CONTAIN),
+                    margin=ft.margin.only(left=5),
+                )
+            )
 
         title = ft.Text(
             self._title, color=self.text_color, theme_style=ft.TextThemeStyle.TITLE_SMALL, expand=True
         )
         controls.append(title)
-        top_wgt = IconButton("push_pin_outlined", self.click_top, "置于顶层", "push_pin")
+        top_wgt = IconButton("push_pin_outlined", self.click_top, "窗口置顶", "push_pin")
         min_wgt = IconButton("remove", self.click_min, "最小化")
         self.max_wgt = IconButton("check_box_outline_blank", self.click_max, "最大化", "filter_none")
         close_wgt = IconButton("close", self.click_close, "退出")
@@ -278,13 +299,18 @@ class ViewHelper(ft.Container):
     def __init__(self, title: str = "", icon: str = "", controls: list = [], **kwargs: Any) -> None:
         super().__init__()
         self.expand = False
+        # self.padding = 7
+        # self.spacing = 0
+        # self.height = 50
         self._title = title
         self._icon = icon
         self.kwargs = kwargs
+        self.vertical_alignment = ft.MainAxisAlignment.CENTER
+        self.horizontal_alignment = ft.CrossAxisAlignment.CENTER
         self.other_controls = controls
 
     def get_drag_area(self) -> ft.WindowDragArea:
-        drag = ft.Row([TitleArea(self._title, self._icon)])
+        drag = ft.Column([TitleArea(self._title, self._icon), hr()])
         return ft.WindowDragArea(drag)
 
     def build_tabs(self) -> None:
@@ -296,9 +322,10 @@ class ViewHelper(ft.Container):
         controls = []
         if self.kwargs.get("title_bar_hidden", True):
             area = self.get_drag_area()
-            controls.extend([area, ft.Divider()])
+            # controls.extend([area, hr()])
+            controls.extend([area])
 
-        c = ft.Column(controls + self.other_controls, spacing=0, expand=False)
+        c = ft.Column(controls + self.other_controls, expand=False)
         self.content = c
 
 
