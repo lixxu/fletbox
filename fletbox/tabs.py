@@ -6,10 +6,13 @@ from typing import Any
 import flet as ft
 
 
-def tabs(tabs_list: list = [], **kwargs: Any) -> ft.Tabs:
+def get_tabs(tabs: list = [], **kwargs: Any) -> ft.Tabs:
     kwargs.setdefault("expand", True)
-    return ft.Tabs(tabs=tabs_list, **kwargs)
+    return ft.Tabs(tabs=tabs, **kwargs)
 
 
 def tab(text: str = "", **kwargs: Any) -> ft.Tab:
     return ft.Tab(text, **kwargs)
+
+
+tabs = get_tabs

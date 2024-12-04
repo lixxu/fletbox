@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
 # -*- coding=utf-8 -*-
 
+import traceback
 from typing import Any
 
 import flet as ft
 
 from . import buttons as fbb
-from . import dialogs as fbd
+from . import dialogs as fbdp
+from . import helpers as fbh
 
 
 def setup_alignment(page: ft.Page, w: str = "", v: str = "center", h: str = "center") -> None:
@@ -19,7 +21,7 @@ def setup_alignment(page: ft.Page, w: str = "", v: str = "center", h: str = "cen
 
 
 def setup_fonts(page: ft.Page) -> None:
-    page.fonts = {"AlibabaPuHuiTi": "/fonts/AlibabaPuHuiTi-3-55-Regular.ttf"}
+    page.fonts = dict(alipuhui="/fonts/AlibabaPuHuiTi-3-55-Regular.ttf")
 
 
 def setup_options(page: ft.Page, icon: str = "/logo.ico", align_kw: dict = {}, **kwargs: Any) -> None:
@@ -47,14 +49,20 @@ def setup_options(page: ft.Page, icon: str = "/logo.ico", align_kw: dict = {}, *
     setup_alignment(page, **align_kw)
     setup_fonts(page)
     theme_kw = {}
-    if font := kwargs.get("font", "AlibabaPuHuiTi"):
+    if font := kwargs.get("font", "alipuhui"):
         theme_kw.update(font_family=font)
 
-    if theme_color := kwargs.get("them_color"):
+    if theme_color := kwargs.get("theme_color"):
         theme_kw.update(color_scheme_seed=theme_color)
 
     page.theme = ft.Theme(**theme_kw)
-    page.on_error = lambda e: print("Page error:", e.data)
+
+    def on_error(e: Any) -> None:
+        if not fbh.is_dist():
+            print("page error: ", e.data)
+            print("details error: ", traceback.format_exc())
+
+    page.on_error = on_error
 
 
 def page_teardown(teardowns: list) -> None:
@@ -121,19 +129,24 @@ def setup_events(page: ft.Page, **kwargs: Any) -> None:
     kw = dict(func=clicked)
     for k in ("yes", "no", "ok"):
         if f"{k}_label" in kwargs:
-            kw.update(label=kwargs[f"{k}_label"])
+            kw.update(label=kwargs[f"{k}_label"])  # type: ignore
 
-        btns[k] = getattr(fbb, k)(**kw)
+        if k in {"no", "ok"}:
+            kw.update(autofocus=True)  # type: ignore
+        else:
+            kw.pop("autofocus", None)
+
+        btns[k] = getattr(fbb, k)(data=k, **kw)
         kw.pop("label", None)
 
     ask_kw = kwargs.get("confirm_kw", {})
     ask_kw.setdefault("icon", "warning")
     ask_kw.setdefault("title_kw", dict(color="red"))
     ask_kw.setdefault("icon_kw", dict(color="red", size=36))
-    ask_dlg = fbd.get_confirm_dialog(
+    ask_dlg = fbdp.confirm_dialog(
         [btns["yes"], btns["no"]], title=kwargs.get("confirm_title", "确定要退出吗?"), **ask_kw
     )
-    ok_dlg = fbd.get_confirm_dialog(
+    ok_dlg = fbdp.confirm_dialog(
         [btns["ok"]], title=kwargs.get("running_notice", "有正在运行的任务, 无法退出!"), **ask_kw
     )
     dlgs = dict(yes=ask_dlg, no=ask_dlg, ok=ok_dlg)

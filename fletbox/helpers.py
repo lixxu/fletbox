@@ -11,6 +11,10 @@ import flet as ft
 from flet.security import decrypt, encrypt
 
 
+def is_dark_mode(page: ft.Page) -> bool:
+    return page.theme_mode == ft.ThemeMode.DARK
+
+
 def clear_splash() -> None:
     try:
         import pyi_splash
@@ -39,7 +43,7 @@ def save_window(page: ft.Page) -> dict:
     height = page.window.height
     if height and width:
         is_max = page.window.maximized
-        settings.update(is_max=is_max)
+        settings.update(is_max=is_max, is_dark=is_dark_mode(page))
         if not is_max:
             settings.update(win_top=top, win_left=left, win_height=height, win_width=width)
 
@@ -51,18 +55,35 @@ def restore_window(page: ft.Page, settings: Any) -> None:
     left = settings.get("win_left")
     width = settings.get("win_width")
     height = settings.get("win_height")
-    is_max = settings.get("is_max")
     if width and height:
         page.window.width = float(width)
         page.window.height = float(height)
         try:
-            page.window.top = float(top)  # type: ignore
-            page.window.left = float(left)  # type: ignore
+            top = float(top)
         except Exception:
-            pass
+            top = -1
 
-    if is_max:
+        try:
+            left = float(left)
+        except Exception:
+            left = -1
+
+        if top < 0:
+            top = 100
+
+        if left < 0:
+            left = 300
+
+        page.window.top = float(top)  # type: ignore
+        page.window.left = float(left)  # type: ignore
+
+    if settings.get("is_max"):
         page.window.maximized = True
+
+    if settings.get("is_dark"):
+        page.theme_mode = ft.ThemeMode.DARK
+    else:
+        page.theme_mode = ft.ThemeMode.LIGHT
 
     page.update()
 
@@ -102,231 +123,24 @@ def get_assets_dir(current_dir: str = ".") -> str:
     return "assets"
 
 
-def hr(**kwargs: Any) -> ft.Divider:
-    return ft.Divider(**kwargs)
+def validate(wgt: Any, val: Any, error_kind: str = "error_text") -> bool:
+    is_ok = True
+    if str(val):
+        fg = None
+        error_text = ""
+    else:
+        fg = "red"
+        is_ok = False
+        error_text = "不能为空"
 
+    if error_kind == "error_text":
+        if hasattr(wgt, "error_text"):
+            wgt.error_text = error_text
 
-def vhr(**kwargs: Any) -> ft.VerticalDivider:
-    return ft.VerticalDivider(**kwargs)
+    elif hasattr(wgt, "border_color"):
+        wgt.border_color = fg
 
-
-def get_text(label: Any = "", **kwargs: Any) -> ft.Text:
-    if kwargs.pop("bold", None):
-        kwargs.setdefault("weight", ft.FontWeight.BOLD)
-
-    return ft.Text(str(label), **kwargs)
-
-
-def get_text_field(label: str, value: Any = "", **kwargs: Any) -> ft.TextField:
-    return ft.TextField(label=label, value=value, **kwargs)
-
-
-def get_list_view(expand: bool = True, spacing: int = 0, padding: int = 0, **kwargs) -> ft.ListView:
-    return ft.ListView(expand=expand, spacing=spacing, padding=padding, **kwargs)
-
-
-def get_button(text: str, func: Any, style_kw: dict = {}, **kwargs: Any) -> ft.OutlinedButton:
-    style_kw.setdefault("shape", ft.RoundedRectangleBorder(radius=2))
-    return ft.OutlinedButton(text, on_click=func, style=ft.ButtonStyle(**style_kw), **kwargs)
-
-
-def get_markdown(text: str, **kwargs: Any) -> ft.Markdown:
-    kwargs.setdefault("expand", True)
-    kwargs.setdefault("selectable", False)
-    kwargs.setdefault("soft_line_break", True)
-    kwargs.setdefault("extension_set", ft.MarkdownExtensionSet.GITHUB_WEB)
-    return ft.Markdown(text, **kwargs)
-
-
-def get_column(controls: list = [], **kwargs: Any) -> ft.Column:
-    kwargs.setdefault("expand", True)
-    kwargs.setdefault("scroll", "auto")
-    return ft.Column(controls, **kwargs)
-
-
-def get_btn_shape(radius: int = 5) -> ft.RoundedRectangleBorder:
-    return ft.RoundedRectangleBorder(radius=radius)
-
-
-def get_text_style(size: int = 15, bold: bool = True) -> ft.TextStyle:
-    kw = dict(weight=ft.FontWeight.BOLD) if bold else {}
-    return ft.TextStyle(size=size, **kw)
-
-
-def get_expand_container(content: Any, expand: bool = True, **kwargs: Any) -> ft.Container:
-    return ft.Container(expand=expand, content=content, **kwargs)
-
-
-def get_expand_row(controls: list, **kwargs: Any) -> ft.Row:
-    return pack_row(controls, expand=True, **kwargs)
-
-
-def get_icon(icon: str) -> str:
-    return icon.lower()
-
-
-def show_snack(page: ft.Page, text: str, **kwargs: Any) -> None:
-    page.snack_bar = ft.SnackBar(ft.Text(text), **kwargs)
-    page.snack_bar.open = True
-
-
-def get_rail(
-    label: str, icon: str = "", selected_icon: str = "", **kwargs: Any
-) -> ft.NavigationRailDestination:
-    kw = dict(label=label)
-    if icon:
-        kw.update(icon=get_icon(icon))
-
-    if selected_icon:
-        kw.update(selected_icon=get_icon(selected_icon))
-
-    return ft.NavigationRailDestination(**(kwargs | kw))
-
-
-def create_top_button(text: str, data: str = "", func: Any = None, **kwargs: Any) -> ft.ElevatedButton:
-    return ft.ElevatedButton(
-        text=text,
-        data=data,
-        on_click=func,
-        style=ft.ButtonStyle(shape=get_btn_shape(), padding=5, text_style=get_text_style()),
-        **kwargs,
-    )
-
-
-def pack_row(controls_list: list, expand: bool = False, **kwargs: Any) -> ft.Row:
-    controls = []
-    total = len(controls_list)
-    for i, item in enumerate(controls_list, 1):
-        if isinstance(item, tuple):
-            wgt, is_expand = item
-        else:
-            wgt, is_expand = item, i == total
-
-        if is_expand or expand:
-            controls.append(get_expand_container(wgt))
-        else:
-            controls.append(wgt)
-
-    return ft.Row(controls, **kwargs)
-
-
-class IconButton(ft.IconButton):
-    def __init__(self, icon: str, func: Any, tooltip: str = "", selected_icon: str = "") -> None:
-        super().__init__()
-        self.on_click = func
-        self.tooltip = tooltip
-        self.icon = get_icon(icon)
-        self.selected_icon = get_icon(selected_icon)
-        self.style = ft.ButtonStyle(shape=get_btn_shape(radius=0))
-
-
-class TitleArea(ft.Container):
-    def __init__(self, title: str, icon: str) -> None:
-        super().__init__()
-        # self.height = 20
-        # self.bgcolor = "indigo300"
-        self.padding = 0
-        self.margin = 0
-        # self.margin = ft.margin.only(left=5)
-        self.expand = True
-        self._title = title
-        self._icon = icon
-
-    def build(self) -> None:
-        self.content = TitleBar(self._title, self._icon)
-
-
-class TitleBar(ft.Row):
-    def __init__(self, title: str, icon: str = "", **kwargs: Any) -> None:
-        super().__init__()
-        self.expand = True
-        self._title = title
-        self._icon = icon
-        self.tight = True
-        self.text_color = kwargs.get("text_color", "indigo")
-
-    def refresh_maximize(self) -> None:
-        tooltip = "恢复窗口" if self.page.window.maximized else "最大化"
-        self.max_wgt.tooltip = tooltip
-        self.page.update()
-
-    def click_top(self, e: Any):
-        e.control.selected = not e.control.selected
-        self.page.window.always_on_top = not self.page.window.always_on_top
-        tooltip = "取消窗口置顶" if self.page.window.always_on_top else "窗口置顶"
-        e.control.tooltip = tooltip
-        self.page.update()
-
-    def click_min(self, e: Any):
-        self.page.window.minimized = True
-        self.page.update()
-
-    def click_max(self, e: Any):
-        e.control.selected = not e.control.selected
-        self.page.window.maximized = not self.page.window.maximized
-        self.refresh_maximize()
-
-    def click_close(self, e: Any) -> None:
-        self.page.visible = False
-        self.page.window.close()
-
-    def build(self) -> ft.Row:
-        def on_resize(e: Any) -> Any:
-            self.refresh_maximize()
-
-        controls = []
-        self.page.on_resize = on_resize
-        if self._icon:
-            controls.append(
-                ft.Container(
-                    ft.Image(src=self._icon, width=20, height=20, fit=ft.ImageFit.CONTAIN),
-                    margin=ft.margin.only(left=5),
-                )
-            )
-
-        title = ft.Text(
-            self._title, color=self.text_color, theme_style=ft.TextThemeStyle.TITLE_SMALL, expand=True
-        )
-        controls.append(title)
-        top_wgt = IconButton("push_pin_outlined", self.click_top, "窗口置顶", "push_pin")
-        min_wgt = IconButton("remove", self.click_min, "最小化")
-        self.max_wgt = IconButton("check_box_outline_blank", self.click_max, "最大化", "filter_none")
-        close_wgt = IconButton("close", self.click_close, "退出")
-        self.controls = controls + [top_wgt, min_wgt, self.max_wgt, close_wgt]
-
-
-class ViewHelper(ft.Container):
-    def __init__(self, title: str = "", icon: str = "", controls: list = [], **kwargs: Any) -> None:
-        super().__init__()
-        self.expand = False
-        # self.padding = 7
-        # self.spacing = 0
-        # self.height = 50
-        self._title = title
-        self._icon = icon
-        self.kwargs = kwargs
-        self.vertical_alignment = ft.MainAxisAlignment.CENTER
-        self.horizontal_alignment = ft.CrossAxisAlignment.CENTER
-        self.other_controls = controls
-
-    def get_drag_area(self) -> ft.WindowDragArea:
-        drag = ft.Column([TitleArea(self._title, self._icon), hr()])
-        return ft.WindowDragArea(drag)
-
-    def build_tabs(self) -> None:
-        area = self.get_drag_area()
-        st = ft.Stack(self.other_controls + [area], expand=True)
-        self.content = st
-
-    def build(self) -> None:
-        controls = []
-        if self.kwargs.get("title_bar_hidden", True):
-            area = self.get_drag_area()
-            # controls.extend([area, hr()])
-            controls.extend([area])
-
-        c = ft.Column(controls + self.other_controls, expand=False)
-        self.content = c
+    return is_ok
 
 
 class StorageHelper:
@@ -341,11 +155,11 @@ class StorageHelper:
 
     @property
     def app_name(self) -> str:
-        return self.__app_name__
+        return self.__app_name__.lower()
 
     @property
     def app_org(self) -> str:
-        return self.__app_org__
+        return self.__app_org__.lower()
 
     @property
     def secret_key(self) -> str:
@@ -395,9 +209,18 @@ class EchoHelper:
         self.page.lv.controls.clear()
 
     def append_lv_text(self, text: Any, **kwargs: Any) -> ft.Text:
-        wgt = ft.Text(f"{text}", **kwargs)
-        self.page.lv.controls.append(wgt)
-        return wgt
+        # wgt = ft.Text(f"{text}", **kwargs)
+        # self.page.lv.controls.append(wgt)
+        # return wgt
+
+        # display line by line due to scroll bar issue
+        wgts = []
+        for line in f"{text or ' '}".splitlines():
+            wgt = ft.Text(line, **kwargs)
+            self.page.lv.controls.append(wgt)
+            wgts.append(wgt)
+
+        return wgts[-1]
 
     def echo(self, text: Any, **kwargs: Any) -> None:
         if kwargs.pop("ts", False):

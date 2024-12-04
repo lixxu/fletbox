@@ -5,7 +5,7 @@ from typing import Any
 
 import flet as ft
 
-from . import helpers as fbh
+from . import displays as fbdp
 
 
 def table(
@@ -38,7 +38,7 @@ def get_cell(data: Any, **kwargs: Any) -> Any:
     if isinstance(data, ft.Control):
         return data
 
-    return fbh.get_text(data, **kwargs)
+    return fbdp.text(data, **kwargs)
 
 
 def get_column(col: Any, kw: dict = {}, **kwargs: Any) -> ft.DataColumn:
