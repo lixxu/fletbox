@@ -8,18 +8,18 @@ fletbox is a collection of helpers for [flet](https://flet.dev/) applications de
 pip install -U fletbox
 ```
 
-## Example (check examples folder for details)
+## Example
 
 ```python
 import fletbox.helpers as fbh
 
+# get assets folder
 assets_dir = fbh.get_assets_dir()
 
-# save window before quit
-settings = fbh.save_window(page)
-# save settings to somewhere
-# save_settings(settings)
+# save window position and size before quit
+fbh.save_window_ui(page, key="win_pos")
 
 # settings is dict-like
+settings = fbh.load_window_ui(page, "win_pos")
 fbh.restore_window(page, settings)
 ```
