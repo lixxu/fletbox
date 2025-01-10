@@ -36,7 +36,7 @@ def text(label: Any = "", **kwargs: Any) -> ft.Text:
     if kwargs.pop("bold", None):
         kwargs.setdefault("weight", ft.FontWeight.BOLD)
 
-    return ft.Text(str(label), **kwargs)
+    return ft.Text(f"{label}", **kwargs)
 
 
 def hr(**kwargs: Any) -> ft.Divider:

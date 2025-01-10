@@ -79,9 +79,9 @@ def confirm(title: str, page: ft.Page, **kwargs: Any) -> None:
 
         buttons = [fbb.yes(func=clicked), fbb.no(func=clicked, autofocus=True)]
 
-    kwargs.setdefault("icon", "question")
-    # kwargs.setdefault("title_kw", dict(color="red"))
-    # kwargs.setdefault("icon_kw", dict(color="red", size=36))
+    kwargs.setdefault("icon", "question_mark")
+    kwargs.setdefault("title_kw", dict(color="blue"))
+    kwargs.setdefault("icon_kw", dict(color="blue", size=36))
     kwargs.update(buttons=buttons)
     dlg = get_dialog(title, **kwargs)
     page.open(dlg)

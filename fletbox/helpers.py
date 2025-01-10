@@ -102,7 +102,7 @@ def is_dist() -> bool:
     if getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS"):
         return True
 
-    return False
+    return not sys.argv[0].endswith(".py")
 
 
 def remember_control(page: ft.Page, name: str, control: Any) -> None:
@@ -198,35 +198,50 @@ class EchoHelper:
     kept_line = ""
     last_wgt = None
     kept_wgt = None
-    kept_style = {}
 
     def __init__(self, page: ft.Page) -> None:
         self.page = page
 
+    @property
+    def lv(self) -> Any:
+        return self.page.lv
+
     def clear_controls(self) -> None:
         self.last_wgt = None
         self.kept_wgt = None
-        self.page.lv.controls.clear()
+        self.lv.controls.clear()
 
     def append_lv_text(self, text: Any, **kwargs: Any) -> ft.Text:
         # wgt = ft.Text(f"{text}", **kwargs)
-        # self.page.lv.controls.append(wgt)
+        # self.lv.controls.append(wgt)
         # return wgt
 
         # display line by line due to scroll bar issue
         wgts = []
-        for line in f"{text or ' '}".splitlines():
-            wgt = ft.Text(line, **kwargs)
-            self.page.lv.controls.append(wgt)
-            wgts.append(wgt)
+        for line in f"{text or ' '}".splitlines(True):
+            if bool(line):
+                wgt = ft.Text(line.removesuffix("\n"), **kwargs)
+                self.lv.controls.append(wgt)
+                wgts.append(wgt)
 
         return wgts[-1]
 
+    def append_to_row(self, text: str, **kwargs: Any) -> None:
+        wgt = kwargs.pop("wgt", None)
+        (wgt or self.last_wgt).spans.append(ft.TextSpan(text, ft.TextStyle(**kwargs)))
+
     def echo(self, text: Any, **kwargs: Any) -> None:
+        if not f"{text}":
+            return
+
         if kwargs.pop("ts", False):
             text = f"[{datetime.now()}] {text}"
         else:
             text = f"{text}"
+
+        new_line = kwargs.pop("nl", True)
+        if new_line:
+            text = f"{text}\n"
 
         if kwargs.pop("bold", False):
             kwargs.setdefault("weight", "bold")
@@ -238,46 +253,46 @@ class EchoHelper:
             kwargs.setdefault("bgcolor", bg)
 
         # if update last control for append to last
-        remeber = kwargs.pop("remeber", None)
+        kwargs.pop("remeber", None)
         append_to_last = kwargs.pop("append_to_last", None)
+        lines = text.splitlines(True)
         if not append_to_last:
-            self.last_wgt = self.append_lv_text(text, **kwargs)
+            self.kept_wgt = None
+            if self.last_wgt:
+                self.append_to_row(lines[0].removesuffix("\n"), **kwargs)
+                if len(lines) > 1:
+                    self.last_wgt = self.append_lv_text("".join(lines[1:]), **kwargs)
+
+            else:
+                last_wgt = self.append_lv_text(text, **kwargs)
+                self.last_wgt = None if new_line else last_wgt
+
+            if new_line:
+                self.last_wgt = None
+
         else:
-            lines = text.lstrip().splitlines()
-            if lines:
-                start_idx = 0
-                if self.last_wgt:
-                    start_idx = 1
-                    if self.last_wgt == self.kept_wgt:
-                        self.last_wgt.value = f"{self.last_wgt.value}{lines[0]}"
-                    else:
-                        self.append_lv_text(f"{self.kept_line}{lines[0]}", **self.kept_style)
+            self.last_wgt = None
+            if self.kept_line and not self.kept_wgt:
+                self.kept_wgt = self.append_lv_text(self.kept_line)
 
-                    self.kept_line = ""
-                    self.kept_style.clear()
-                elif self.kept_line:
-                    start_idx = 1
-                    self.kept_wgt = None
-                    self.append_lv_text(f"{self.kept_line}{lines[0]}", **self.kept_style)
+            if self.kept_wgt:
+                self.append_to_row(lines[0].removesuffix("\n"), wgt=self.kept_wgt, **kwargs)
+                if len(lines) > 1:
+                    self.kept_wgt = self.append_lv_text("".join(lines[1:]), **kwargs)
 
-                if left_text := lines[start_idx:-1]:
-                    self.append_lv_text("\n".join(left_text), **kwargs)
+            else:
+                self.kept_wgt = self.append_lv_text(text, **kwargs)
 
-                # show last line
-                self.last_wgt = self.append_lv_text(lines[-1], **kwargs)
-                if remeber:
-                    self.kept_line = lines[-1]
-                    self.kept_wgt = self.last_wgt
-                    self.kept_style = dict(**kwargs)
+            self.kept_line = lines[-1]
 
         self.page.update()
 
 
-def run_app(func: Any, log_level: int = logging.INFO, log_fmt: str = "") -> None:
+def run_app(func: Any, log_level: int = logging.INFO, log_fmt: str = "", **kwargs: Any) -> None:
     if not is_dist():
         if not log_fmt:
             log_fmt = "%(levelname)s:%(asctime)s %(message)s"
 
         logging.basicConfig(level=log_level, format=log_fmt)
 
-    ft.app(func, assets_dir=get_assets_dir())
+    ft.app(func, assets_dir=get_assets_dir(), **kwargs)

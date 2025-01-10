@@ -56,6 +56,10 @@ def setup_options(page: ft.Page, icon: str = "/logo.ico", align_kw: dict = {}, *
         theme_kw.update(color_scheme_seed=theme_color)
 
     page.theme = ft.Theme(**theme_kw)
+    page.locale_configuration = ft.LocaleConfiguration(
+        supported_locales=[ft.Locale("en", "US"), ft.Locale("zh", "CN")],
+        current_locale=ft.Locale("zh", "CN"),
+    )
 
     def on_error(e: Any) -> None:
         if not fbh.is_dist():
