@@ -34,8 +34,8 @@ def dropdown(options: list = [], label: str = "", **kwargs: Any) -> ft.Dropdown:
     return ft.Dropdown(label=label, options=choices, **kwargs)
 
 
-def dropdown_option(key: str, **kwargs: Any) -> ft.dropdown.Option:
-    return ft.dropdown.Option(key, **kwargs)
+def dropdown_option(key: str, **kwargs: Any) -> ft.DropdownOption:
+    return ft.DropdownOption(key, **kwargs)
 
 
 def switch(label: str, value: bool, **kwargs: Any) -> ft.Switch:
